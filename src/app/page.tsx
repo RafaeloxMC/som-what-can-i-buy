@@ -155,11 +155,14 @@ const ExcludedProductsTags = memo(
 		const [showSuggestions, setShowSuggestions] = useState(false);
 
 		const allProducts = useMemo(() => {
-			return getProducts().map((product: Product) => product.name);
+			const products = getProducts();
+			return products
+				? products.map((product: Product) => product.name)
+				: [];
 		}, []);
 
 		const suggestions = useMemo(() => {
-			if (!inputValue.trim()) return [];
+			if (!inputValue.trim() || allProducts.length === 0) return [];
 
 			return allProducts
 				.filter(
@@ -199,6 +202,16 @@ const ExcludedProductsTags = memo(
 				setShowSuggestions(false);
 			}
 		};
+
+		if (allProducts.length === 0) {
+			return (
+				<div className="space-y-3">
+					<div className="text-center py-4 text-muted-foreground text-sm">
+						No products available to exclude
+					</div>
+				</div>
+			);
+		}
 
 		return (
 			<div className="space-y-3">
@@ -408,9 +421,19 @@ export default function Home() {
 		[formData.excludedProducts, handleInputChange]
 	);
 
+	const availableProducts = useMemo(() => {
+		const products = getProducts();
+		return products ? products : [];
+	}, []);
+
 	const calculateOptimalPurchase = useCallback(async () => {
 		if (!isFormValid) {
 			setError("Please enter a valid number of shells (0 or greater)");
+			return;
+		}
+
+		if (availableProducts.length === 0) {
+			setError("No products are currently available");
 			return;
 		}
 
@@ -463,7 +486,7 @@ export default function Home() {
 		} finally {
 			setIsLoading(false);
 		}
-	}, [formData, isFormValid]);
+	}, [formData, isFormValid, availableProducts]);
 
 	const resultsSummary = useMemo(() => {
 		if (!results) return null;
@@ -502,281 +525,8 @@ export default function Home() {
 				</header>
 
 				<main className="bg-card/80 backdrop-blur-sm rounded-3xl border border-border/50 overflow-hidden shadow-sm">
-					<section className="p-8 border-b border-border">
-						<div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-							<div className="space-y-6">
-								<div className="space-y-3">
-									<label className="text-sm font-medium text-card-foreground">
-										Shells Available
-									</label>
-									<input
-										type="number"
-										placeholder="0"
-										value={formData.shells}
-										onChange={handleShellsChange}
-										min="0"
-										className={`w-full h-12 px-4 text-lg bg-input border rounded-xl focus:bg-background focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all outline-none text-foreground placeholder:text-muted-foreground ${
-											error && !isFormValid
-												? "border-red-500"
-												: "border-border"
-										}`}
-									/>
-								</div>
-
-								<div className="space-y-3">
-									<label className="text-sm font-medium text-card-foreground">
-										Optimization Strategy
-									</label>
-									<select
-										value={formData.strategy}
-										onChange={handleStrategyChange}
-										className="w-full h-12 px-4 bg-input border border-border rounded-xl focus:bg-background focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all outline-none text-foreground"
-									>
-										<option value="most_valuable">
-											Maximize Value
-										</option>
-										<option value="most_products">
-											Maximize Quantity
-										</option>
-									</select>
-								</div>
-
-								<div className="space-y-3">
-									<label className="text-sm font-medium text-card-foreground">
-										Product Limit
-									</label>
-									<input
-										type="number"
-										placeholder="No limit"
-										value={formData.maxProducts}
-										onChange={handleMaxProductsChange}
-										min="1"
-										className="w-full h-12 px-4 bg-input border border-border rounded-xl focus:bg-background focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all outline-none text-foreground placeholder:text-muted-foreground"
-									/>
-								</div>
-
-								<div className="space-y-3">
-									<label className="text-sm font-medium text-card-foreground">
-										Exclude Products
-									</label>
-									<ExcludedProductsTags
-										excludedProducts={
-											formData.excludedProducts
-										}
-										onAddProduct={handleAddExcludedProduct}
-										onRemoveProduct={
-											handleRemoveExcludedProduct
-										}
-									/>
-								</div>
-							</div>
-
-							<div className="space-y-6">
-								<div className="space-y-4">
-									<h3 className="text-sm font-medium text-card-foreground">
-										Preferences
-									</h3>
-									<div className="space-y-4">
-										{[
-											{
-												id: "allowDuplicates" as const,
-												label: "Allow duplicate items",
-												checked:
-													formData.allowDuplicates,
-											},
-											{
-												id: "excludeCredits" as const,
-												label: "Exclude credit purchases",
-												checked:
-													formData.excludeCredits,
-											},
-											{
-												id: "excludeBadges" as const,
-												label: "Exclude badge purchases",
-												checked: formData.excludeBadges,
-											},
-											{
-												id: "excludeLotteryTicket" as const,
-												label: "Exclude lottery ticket purchases",
-												checked:
-													formData.excludeLotteryTicket,
-											},
-										].map((option) => (
-											<label
-												key={option.id}
-												className="flex items-center gap-3 cursor-pointer group"
-											>
-												<div className="relative">
-													<input
-														type="checkbox"
-														checked={option.checked}
-														onChange={handleCheckboxChange(
-															option.id
-														)}
-														className="peer w-5 h-5 appearance-none border-2 border-border rounded checked:border-primary checked:bg-primary transition-colors"
-													/>
-													<svg
-														className="absolute inset-0 w-5 h-5 text-primary-foreground opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"
-														fill="currentColor"
-														viewBox="0 0 20 20"
-													>
-														<path
-															fillRule="evenodd"
-															d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-															clipRule="evenodd"
-														/>
-													</svg>
-												</div>
-												<span className="text-sm text-muted-foreground group-hover:text-card-foreground transition-colors">
-													{option.label}
-												</span>
-											</label>
-										))}
-									</div>
-								</div>
-							</div>
-						</div>
-
-						{error && (
-							<div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-								<p className="text-sm text-red-700">{error}</p>
-							</div>
-						)}
-
-						<div className="mt-8 flex justify-center">
-							<button
-								onClick={calculateOptimalPurchase}
-								disabled={!isFormValid || isLoading}
-								className={`px-8 py-4 font-medium rounded-xl transition-all shadow-sm ${
-									isFormValid && !isLoading
-										? "bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-md"
-										: "bg-muted text-muted-foreground cursor-not-allowed"
-								}`}
-							>
-								{isLoading
-									? "Calculating..."
-									: "Calculate Optimal Purchase"}
-							</button>
-						</div>
-					</section>
-
-					<section className="p-8">
-						{isLoading ? (
-							<div className="space-y-8">
-								<div className="text-center py-8">
-									<div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-6 animate-pulse">
-										<svg
-											className="w-7 h-7 text-primary animate-spin"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-											/>
-										</svg>
-									</div>
-									<h3 className="text-lg font-medium text-card-foreground mb-2">
-										Calculating optimal purchase...
-									</h3>
-									<p className="text-muted-foreground text-sm">
-										Finding the best combination for your
-										shells
-									</p>
-								</div>
-
-								<div className="space-y-6">
-									<h3 className="text-lg font-medium text-card-foreground">
-										Loading recommendations...
-									</h3>
-									<div className="grid gap-4 lg:grid-cols-2">
-										{Array.from({ length: 4 }).map(
-											(_, index) => (
-												<ProductCardSkeleton
-													key={index}
-												/>
-											)
-										)}
-									</div>
-								</div>
-							</div>
-						) : results ? (
-							<div className="space-y-8">
-								<div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-									<div className="text-center space-y-2">
-										<div className="text-2xl font-semibold text-card-foreground">
-											{resultsSummary?.totalItems || 0}
-										</div>
-										<div className="text-sm text-muted-foreground">
-											Items
-										</div>
-									</div>
-									<div className="text-center space-y-2">
-										<div className="text-2xl font-semibold text-card-foreground">
-											{resultsSummary?.totalValue || 0}
-										</div>
-										<div className="text-sm text-muted-foreground">
-											Shells Used
-										</div>
-									</div>
-									<div className="text-center space-y-2">
-										<div className="text-2xl font-semibold text-card-foreground">
-											{resultsSummary?.remainingShells ||
-												0}
-										</div>
-										<div className="text-sm text-muted-foreground">
-											Remaining
-										</div>
-									</div>
-									<div className="text-center space-y-2">
-										<div className="text-2xl font-semibold text-card-foreground">
-											{Math.round(
-												resultsSummary?.efficiency || 0
-											)}
-											%
-										</div>
-										<div className="text-sm text-muted-foreground">
-											Efficiency
-										</div>
-									</div>
-								</div>
-
-								{results.products.length > 0 ? (
-									<div className="space-y-6">
-										<h3 className="text-lg font-medium text-card-foreground">
-											Recommended Products
-										</h3>
-										<div className="grid gap-4 lg:grid-cols-2">
-											{results.products.map(
-												(item, index) => (
-													<ProductCard
-														key={`${item.product.uid}-${index}`}
-														product={item.product}
-														quantity={item.quantity}
-														isExcluded={excludedProductsSet.has(
-															item.product.name
-														)}
-														onToggleExclude={
-															handleToggleExclude
-														}
-													/>
-												)
-											)}
-										</div>
-									</div>
-								) : (
-									<div className="text-center py-8">
-										<p className="text-muted-foreground">
-											{results.message ||
-												"No products found for your criteria"}
-										</p>
-									</div>
-								)}
-							</div>
-						) : (
+					{availableProducts.length === 0 ? (
+						<section className="p-8">
 							<div className="text-center py-16">
 								<div className="inline-flex items-center justify-center w-16 h-16 bg-muted rounded-2xl mb-6">
 									<svg
@@ -789,24 +539,345 @@ export default function Home() {
 											strokeLinecap="round"
 											strokeLinejoin="round"
 											strokeWidth={1.5}
-											d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+											d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
 										/>
 									</svg>
 								</div>
 								<h3 className="text-lg font-medium text-card-foreground mb-2">
-									Ready to optimize
+									No products available
 								</h3>
 								<p className="text-muted-foreground text-sm max-w-md mx-auto">
-									Enter your available shells and preferences
-									above to find the optimal purchase
-									combination.
+									There are currently no products available to
+									purchase. Please check back later.
 								</p>
 							</div>
-						)}
-					</section>
-					<section className="border-t border-border">
-						<Footer />
-					</section>
+						</section>
+					) : (
+						<>
+							<section className="p-8 border-b border-border">
+								<div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
+									<div className="space-y-6">
+										<div className="space-y-3">
+											<label className="text-sm font-medium text-card-foreground">
+												Shells Available
+											</label>
+											<input
+												type="number"
+												placeholder="0"
+												value={formData.shells}
+												onChange={handleShellsChange}
+												min="0"
+												className={`w-full h-12 px-4 text-lg bg-input border rounded-xl focus:bg-background focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all outline-none text-foreground placeholder:text-muted-foreground ${
+													error && !isFormValid
+														? "border-red-500"
+														: "border-border"
+												}`}
+											/>
+										</div>
+
+										<div className="space-y-3">
+											<label className="text-sm font-medium text-card-foreground">
+												Optimization Strategy
+											</label>
+											<select
+												value={formData.strategy}
+												onChange={handleStrategyChange}
+												className="w-full h-12 px-4 bg-input border border-border rounded-xl focus:bg-background focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all outline-none text-foreground"
+											>
+												<option value="most_valuable">
+													Maximize Value
+												</option>
+												<option value="most_products">
+													Maximize Quantity
+												</option>
+											</select>
+										</div>
+
+										<div className="space-y-3">
+											<label className="text-sm font-medium text-card-foreground">
+												Product Limit
+											</label>
+											<input
+												type="number"
+												placeholder="No limit"
+												value={formData.maxProducts}
+												onChange={
+													handleMaxProductsChange
+												}
+												min="1"
+												className="w-full h-12 px-4 bg-input border border-border rounded-xl focus:bg-background focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all outline-none text-foreground placeholder:text-muted-foreground"
+											/>
+										</div>
+
+										<div className="space-y-3">
+											<label className="text-sm font-medium text-card-foreground">
+												Exclude Products
+											</label>
+											<ExcludedProductsTags
+												excludedProducts={
+													formData.excludedProducts
+												}
+												onAddProduct={
+													handleAddExcludedProduct
+												}
+												onRemoveProduct={
+													handleRemoveExcludedProduct
+												}
+											/>
+										</div>
+									</div>
+
+									<div className="space-y-6">
+										<div className="space-y-4">
+											<h3 className="text-sm font-medium text-card-foreground">
+												Preferences
+											</h3>
+											<div className="space-y-4">
+												{[
+													{
+														id: "allowDuplicates" as const,
+														label: "Allow duplicate items",
+														checked:
+															formData.allowDuplicates,
+													},
+													{
+														id: "excludeCredits" as const,
+														label: "Exclude credit purchases",
+														checked:
+															formData.excludeCredits,
+													},
+													{
+														id: "excludeBadges" as const,
+														label: "Exclude badge purchases",
+														checked:
+															formData.excludeBadges,
+													},
+													{
+														id: "excludeLotteryTicket" as const,
+														label: "Exclude lottery ticket purchases",
+														checked:
+															formData.excludeLotteryTicket,
+													},
+												].map((option) => (
+													<label
+														key={option.id}
+														className="flex items-center gap-3 cursor-pointer group"
+													>
+														<div className="relative">
+															<input
+																type="checkbox"
+																checked={
+																	option.checked
+																}
+																onChange={handleCheckboxChange(
+																	option.id
+																)}
+																className="peer w-5 h-5 appearance-none border-2 border-border rounded checked:border-primary checked:bg-primary transition-colors"
+															/>
+															<svg
+																className="absolute inset-0 w-5 h-5 text-primary-foreground opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"
+																fill="currentColor"
+																viewBox="0 0 20 20"
+															>
+																<path
+																	fillRule="evenodd"
+																	d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+																	clipRule="evenodd"
+																/>
+															</svg>
+														</div>
+														<span className="text-sm text-muted-foreground group-hover:text-card-foreground transition-colors">
+															{option.label}
+														</span>
+													</label>
+												))}
+											</div>
+										</div>
+									</div>
+								</div>
+
+								{error && (
+									<div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+										<p className="text-sm text-red-700">
+											{error}
+										</p>
+									</div>
+								)}
+
+								<div className="mt-8 flex justify-center">
+									<button
+										onClick={calculateOptimalPurchase}
+										disabled={!isFormValid || isLoading}
+										className={`px-8 py-4 font-medium rounded-xl transition-all shadow-sm ${
+											isFormValid && !isLoading
+												? "bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-md"
+												: "bg-muted text-muted-foreground cursor-not-allowed"
+										}`}
+									>
+										{isLoading
+											? "Calculating..."
+											: "Calculate Optimal Purchase"}
+									</button>
+								</div>
+							</section>
+
+							<section className="p-8">
+								{isLoading ? (
+									<div className="space-y-8">
+										<div className="text-center py-8">
+											<div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-6 animate-pulse">
+												<svg
+													className="w-7 h-7 text-primary animate-spin"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+													/>
+												</svg>
+											</div>
+											<h3 className="text-lg font-medium text-card-foreground mb-2">
+												Calculating optimal purchase...
+											</h3>
+											<p className="text-muted-foreground text-sm">
+												Finding the best combination for
+												your shells
+											</p>
+										</div>
+
+										<div className="space-y-6">
+											<h3 className="text-lg font-medium text-card-foreground">
+												Loading recommendations...
+											</h3>
+											<div className="grid gap-4 lg:grid-cols-2">
+												{Array.from({ length: 4 }).map(
+													(_, index) => (
+														<ProductCardSkeleton
+															key={index}
+														/>
+													)
+												)}
+											</div>
+										</div>
+									</div>
+								) : results ? (
+									<div className="space-y-8">
+										<div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+											<div className="text-center space-y-2">
+												<div className="text-2xl font-semibold text-card-foreground">
+													{resultsSummary?.totalItems ||
+														0}
+												</div>
+												<div className="text-sm text-muted-foreground">
+													Items
+												</div>
+											</div>
+											<div className="text-center space-y-2">
+												<div className="text-2xl font-semibold text-card-foreground">
+													{resultsSummary?.totalValue ||
+														0}
+												</div>
+												<div className="text-sm text-muted-foreground">
+													Shells Used
+												</div>
+											</div>
+											<div className="text-center space-y-2">
+												<div className="text-2xl font-semibold text-card-foreground">
+													{resultsSummary?.remainingShells ||
+														0}
+												</div>
+												<div className="text-sm text-muted-foreground">
+													Remaining
+												</div>
+											</div>
+											<div className="text-center space-y-2">
+												<div className="text-2xl font-semibold text-card-foreground">
+													{Math.round(
+														resultsSummary?.efficiency ||
+															0
+													)}
+													%
+												</div>
+												<div className="text-sm text-muted-foreground">
+													Efficiency
+												</div>
+											</div>
+										</div>
+
+										{results.products.length > 0 ? (
+											<div className="space-y-6">
+												<h3 className="text-lg font-medium text-card-foreground">
+													Recommended Products
+												</h3>
+												<div className="grid gap-4 lg:grid-cols-2">
+													{results.products.map(
+														(item, index) => (
+															<ProductCard
+																key={`${item.product.uid}-${index}`}
+																product={
+																	item.product
+																}
+																quantity={
+																	item.quantity
+																}
+																isExcluded={excludedProductsSet.has(
+																	item.product
+																		.name
+																)}
+																onToggleExclude={
+																	handleToggleExclude
+																}
+															/>
+														)
+													)}
+												</div>
+											</div>
+										) : (
+											<div className="text-center py-8">
+												<p className="text-muted-foreground">
+													{results.message ||
+														"No products found for your criteria"}
+												</p>
+											</div>
+										)}
+									</div>
+								) : (
+									<div className="text-center py-16">
+										<div className="inline-flex items-center justify-center w-16 h-16 bg-muted rounded-2xl mb-6">
+											<svg
+												className="w-7 h-7 text-muted-foreground"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={1.5}
+													d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+												/>
+											</svg>
+										</div>
+										<h3 className="text-lg font-medium text-card-foreground mb-2">
+											Ready to optimize
+										</h3>
+										<p className="text-muted-foreground text-sm max-w-md mx-auto">
+											Enter your available shells and
+											preferences above to find the
+											optimal purchase combination.
+										</p>
+									</div>
+								)}
+							</section>
+							<section className="border-t border-border">
+								<Footer />
+							</section>
+						</>
+					)}
 				</main>
 			</div>
 		</div>
