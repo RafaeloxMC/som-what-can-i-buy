@@ -249,7 +249,6 @@ const ExcludedProductsTags = memo(
 						className="w-full h-12 px-4 bg-input border border-border rounded-xl focus:bg-background focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all outline-none text-foreground placeholder:text-muted-foreground"
 					/>
 
-					{/* Loading indicator */}
 					{isSearching && (
 						<div className="absolute right-3 top-1/2 transform -translate-y-1/2">
 							<svg
@@ -268,7 +267,6 @@ const ExcludedProductsTags = memo(
 						</div>
 					)}
 
-					{/* Suggestions dropdown */}
 					{showSuggestions && suggestions.length > 0 && (
 						<div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
 							{suggestions.map((productName: string) => (
@@ -285,7 +283,6 @@ const ExcludedProductsTags = memo(
 						</div>
 					)}
 
-					{/* No results message */}
 					{showSuggestions &&
 						!isSearching &&
 						inputValue.length >= 2 &&
@@ -299,7 +296,6 @@ const ExcludedProductsTags = memo(
 						)}
 				</div>
 
-				{/* Show excluded products as tags */}
 				{excludedProducts.length > 0 && (
 					<div className="flex flex-wrap gap-2">
 						{excludedProducts.map((productName) => (
