@@ -161,7 +161,58 @@ function main() {
 	const html = readHtml(inputPath);
 	const $ = cheerio.load(html);
 
-	const productCards = $(".card-with-gradient").toArray();
+	console.log("Debugging selectors:");
+	console.log(`.card-with-gradient: ${$(".card-with-gradient").length}`);
+	console.log(`.card: ${$(".card").length}`);
+	console.log(`[class*="card"]: ${$('[class*="card"]').length}`);
+	console.log(`[class*="product"]: ${$('[class*="product"]').length}`);
+	console.log(`[class*="item"]: ${$('[class*="item"]').length}`);
+	console.log(
+		`div[class*="grid"] > div: ${$('div[class*="grid"] > div').length}`
+	);
+	console.log(`form[action]: ${$("form[action]").length}`);
+
+	let productCards = $(".card-with-gradient").toArray();
+
+	if (productCards.length === 0) {
+		console.log("Trying alternative selectors...");
+
+		const alternativeSelectors = [
+			".card",
+			"[class*='card']",
+			"[class*='product']",
+			"[class*='item']",
+			"div[class*='grid'] > div",
+			"form[action*='/shop/']",
+			"form[action*='/buy/']",
+			"div:has(h3):has(button)",
+			"div:has(img):has(button)",
+		];
+
+		for (const selector of alternativeSelectors) {
+			const elements = $(selector).toArray();
+			console.log(`${selector}: ${elements.length} elements`);
+
+			if (elements.length > 0) {
+				const hasProductContent = elements.some((el) => {
+					const $el = $(el);
+					const hasPrice = $el.text().match(/\$\d+|\d+\s*shell/i);
+					const hasButton = $el.find("button").length > 0;
+					const hasImage = $el.find("img").length > 0;
+					const hasHeading = $el.find("h1,h2,h3,h4,h5,h6").length > 0;
+
+					return (hasPrice && hasButton) || (hasImage && hasHeading);
+				});
+
+				if (hasProductContent) {
+					console.log(`Using selector: ${selector}`);
+					productCards = elements;
+					break;
+				}
+			}
+		}
+	}
+
 	console.log(`Found ${productCards.length} product cards`);
 
 	const products = [];
